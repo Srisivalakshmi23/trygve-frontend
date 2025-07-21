@@ -1,0 +1,104 @@
+/* Signup Success Screen Styles */
+.signup-success-container {
+  min-height: 100vh;
+  height: 100vh;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'Audiowide', cursive;
+  position: relative;
+  overflow: hidden;
+}
+
+.signup-success-background-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.signup-success-background-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.signup-success-card {
+  background: white;
+  padding: 3rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.signup-success-content {
+  margin-bottom: 2rem;
+}
+
+.signup-success-icon {
+  width: 5rem;
+  height: 5rem;
+  background: #2563EB;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  margin-bottom: 1rem;
+}
+
+.signup-success-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: contain;
+}
+
+.signup-success-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2563EB;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+  font-family: 'Audiowide', cursive;
+}
+
+.signup-success-subtitle {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-success-btn {
+  width: 100%;
+  background: #2563EB;
+  color: white;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 30px;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-success-btn:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}

@@ -1,0 +1,295 @@
+/* SignUp Screen Styles */
+.signup-container {
+  min-height: 100vh;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'Audiowide', cursive;
+  position: relative;
+}
+
+/* Background Logo */
+.signup-background-logo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.signup-background-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.05;
+}
+
+.signup-card {
+  background: white;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 2;
+}
+
+.signup-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.signup-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: contain;
+}
+
+.signup-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #2563EB;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+  font-family: 'Audiowide', cursive;
+}
+
+.signup-subtitle {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-form {
+  margin-bottom: 2rem;
+}
+
+.signup-form-group {
+  margin-bottom: 1.5rem;
+}
+
+.signup-form-label {
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  display: block;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-input-container {
+  position: relative;
+}
+
+.signup-input {
+  width: 100%;
+  padding: 0.75rem;
+  padding-right: 2.5rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-input:focus {
+  border-color: #2563EB;
+}
+
+.signup-input-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+.signup-method-selector {
+  margin-bottom: 1.5rem;
+}
+
+.signup-method-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+}
+
+.signup-method-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #E5E7EB;
+  background: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-method-btn.active {
+  border-color: #2563EB;
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.signup-method-btn:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.signup-method-btn:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.signup-country-container {
+  position: relative;
+}
+
+.signup-country-select {
+  width: 100%;
+  padding: 0.75rem;
+  padding-right: 2.5rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  background-color: white;
+  appearance: none;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-country-select:focus {
+  border-color: #2563EB;
+}
+
+.signup-country-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+.signup-phone-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.signup-country-prefix {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #F9FAFB;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-family: 'Poppins', sans-serif;
+  min-width: 100px;
+}
+
+.signup-phone-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-phone-input:focus {
+  border-color: #2563EB;
+}
+
+.signup-phone-counter {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.25rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-phone-counter.complete {
+  color: #059669;
+}
+
+.signup-password-container {
+  position: relative;
+}
+
+.signup-password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  padding: 0;
+}
+
+.signup-submit-btn {
+  width: 100%;
+  background: #2563EB;
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-submit-btn:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.signup-submit-btn:hover:not(:disabled) {
+  background: #1D4ED8;
+}
+
+.signup-footer {
+  text-align: center;
+}
+
+.signup-footer-text {
+  color: #666;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.signup-login-link {
+  background: none;
+  border: none;
+  color: #2563EB;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  font-family: 'Poppins', sans-serif;
+}
