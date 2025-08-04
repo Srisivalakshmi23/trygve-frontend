@@ -49,6 +49,14 @@ const OnboardingFlow: React.FC = () => {
             if (event.key === 'Enter' && currentSlide === 0) {
                 nextSlide();
             }
+            // Left arrow - go to previous slide
+            else if (event.key === 'ArrowLeft' && currentSlide > 0) {
+                setCurrentSlide(prev => prev - 1);
+            }
+            // Right arrow - go to next slide
+            else if (event.key === 'ArrowRight' && currentSlide < slides.length - 1) {
+                nextSlide();
+            }
         };
 
         window.addEventListener('keydown', handleKeyPress);

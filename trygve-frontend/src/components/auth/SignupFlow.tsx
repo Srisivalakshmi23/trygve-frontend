@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { setupRecaptcha, sendPhoneOTP, verifyPhoneOTP } from '../Firebase/Auth';
+import { RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import '../../css/SignupFlow.css';
 
 const SignupFlow: React.FC = () => {
+  const [step, setStep] = useState<'phone' | 'verification'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [selectedCountry, setSelectedCountry] = useState({
     code: 'IN',
     name: 'India',
@@ -34,6 +42,25 @@ const SignupFlow: React.FC = () => {
     { code: 'TH', name: 'Thailand', dialCode: '+66', flag: '🇹🇭', phoneLength: 9 }
   ];
 
+  // Initialize reCAPTCHA when component mounts
+  useEffect(() => {
+    try {
+      const verifier = setupRecaptcha('recaptcha-container');
+      setRecaptchaVerifier(verifier);
+      console.log('✅ reCAPTCHA initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize reCAPTCHA:', error);
+      setError('Failed to initialize verification system');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+      }
+    };
+  }, []);
+
   // Enforce phone number length limit and update placeholder when country changes
   useEffect(() => {
     if (phoneInputRef.current) {
@@ -53,41 +80,142 @@ const SignupFlow: React.FC = () => {
     }
   }, [phoneNumber, selectedCountry.phoneLength]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phoneNumber.length === selectedCountry.phoneLength) {
-      // Store values in localStorage
+    setError('');
+    
+    if (phoneNumber.length !== selectedCountry.phoneLength) {
+      setError('Please enter a complete phone number');
+      return;
+    }
+
+    if (!recaptchaVerifier) {
+      setError('Verification system not ready. Please refresh the page.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const fullPhoneNumber = selectedCountry.dialCode + phoneNumber;
+      console.log('📱 Sending OTP to:', fullPhoneNumber);
+
+      // Send OTP using Firebase
+      const confirmationResult = await sendPhoneOTP(fullPhoneNumber, recaptchaVerifier);
+      
+      // Store verification data for OTP verification page
       const formData = {
         phoneNumber: phoneNumber,
         countryCode: selectedCountry.dialCode,
         countryName: selectedCountry.name,
+        fullPhoneNumber: fullPhoneNumber,
         timestamp: new Date().toISOString()
       };
       
       localStorage.setItem('signupFormData', JSON.stringify(formData));
+      localStorage.setItem('phoneVerificationId', confirmationResult.verificationId || '');
       
-      // Display in console with structured format
-      console.log('Account created for:', {
-        fullName: 'User Registration',
-        email: 'pending@verification.com',
-        location: selectedCountry.name,
-        on: new Date().toLocaleString(),
-        primaryPhoneNumber: selectedCountry.dialCode + phoneNumber,
-        secondaryPhoneNumber: '',
-        countryDetails: {
-          code: selectedCountry.code,
-          flag: selectedCountry.flag,
-          dialCode: selectedCountry.dialCode,
-          phoneLength: selectedCountry.phoneLength
+      console.log('✅ OTP sent successfully to:', fullPhoneNumber);
+      console.log('📝 Verification data stored in localStorage');
+      
+      // Store the confirmation result and move to verification step
+      setConfirmationResult(confirmationResult);
+      setStep('verification');
+
+    } catch (error: any) {
+      console.error('❌ Failed to send OTP:', error.message);
+      setError(error.message || 'Failed to send verification code. Please try again.');
+      
+      // Reset reCAPTCHA on error
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+        try {
+          const newVerifier = setupRecaptcha('recaptcha-container');
+          setRecaptchaVerifier(newVerifier);
+        } catch (setupError) {
+          console.error('❌ Failed to reset reCAPTCHA:', setupError);
         }
-      });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPVerification = async () => {
+    const enteredOTP = otp.join('');
+    
+    if (enteredOTP.length !== 6) {
+      setError('Please enter the complete 6-digit verification code');
+      return;
+    }
+
+    if (!confirmationResult) {
+      setError('Verification session expired. Please request a new code.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      console.log('🔍 Verifying OTP:', enteredOTP);
       
-      console.log('Primary Phone Number:', selectedCountry.dialCode + phoneNumber);
-      console.log('Secondary Phone Number:', '');
-      console.log('Location:', selectedCountry.name);
-      console.log('[localStorage]:', formData);
+      // Verify OTP using Firebase
+      const user = await verifyPhoneOTP(confirmationResult, enteredOTP);
       
-      navigate('/otp-verification', { state: { phoneNumber, countryCode: selectedCountry.dialCode } });
+      console.log('✅ PHONE VERIFICATION SUCCESSFUL! User:', user.uid);
+      console.log('📱 Phone verified:', user.phoneNumber);
+      
+      // Navigate to user details collection
+      navigate('/user-details');
+
+    } catch (error: any) {
+      console.error('❌ OTP VERIFICATION FAILED:', error.message);
+      setError('Invalid verification code. Please try again.');
+      // Clear the OTP inputs
+      setOtp(['', '', '', '', '', '']);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPChange = (index: number, value: string) => {
+    if (value.length <= 1) {
+      const newOTP = [...otp];
+      newOTP[index] = value;
+      setOtp(newOTP);
+      
+      // Auto-focus next input when typing
+      if (value && index < 5) {
+        const nextInput = document.getElementById(`otp-${index + 1}`) as HTMLInputElement;
+        if (nextInput) nextInput.focus();
+      }
+    }
+  };
+
+  const handleOTPKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Handle backspace to move to previous field
+    if (e.key === 'Backspace') {
+      const currentValue = otp[index];
+      
+      // If current field has a value, clear it first
+      if (currentValue !== '') {
+        const newOTP = [...otp];
+        newOTP[index] = '';
+        setOtp(newOTP);
+      }
+      // If current field is empty and we're not at the first field, move to previous field
+      else if (currentValue === '' && index > 0) {
+        // Move focus to previous field
+        const prevInput = document.getElementById(`otp-${index - 1}`) as HTMLInputElement;
+        if (prevInput) {
+          prevInput.focus();
+          // Clear the previous field as well
+          const newOTP = [...otp];
+          newOTP[index - 1] = '';
+          setOtp(newOTP);
+        }
+      }
     }
   };
 
@@ -149,6 +277,90 @@ const SignupFlow: React.FC = () => {
     setPhoneNumber(truncated);
   };
 
+  // Render OTP Verification Step
+  if (step === 'verification') {
+    return (
+      <div className="signup-flow-container">
+        {/* Background Logo */}
+        <div className="signup-flow-background-logo">
+          <img src="/images/logo.png" alt="Trygve Background Logo" />
+        </div>
+        <div className="signup-flow-card">
+          {/* Header */}
+          <div className="signup-flow-header">
+            <button
+              onClick={() => setStep('phone')}
+              className="signup-flow-back-btn"
+            >
+              <ArrowLeft size={20} color="#2563EB" />
+            </button>
+            
+            <h1 className="signup-flow-title">
+              Verification Code
+            </h1>
+            
+            <p className="signup-flow-subtitle">
+              We have sent the verification code to {selectedCountry.dialCode} {phoneNumber}
+            </p>
+            
+            {/* Error Message */}
+            {error && (
+              <div className="signup-flow-error">
+                <p className="signup-flow-error-text">
+                  {error}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* OTP Input */}
+          <div className="signup-flow-otp-container">
+            <div className="signup-flow-otp-inputs">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  id={`otp-${index}`}
+                  type="text"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOTPChange(index, e.target.value)}
+                  onKeyDown={(e) => handleOTPKeyDown(index, e)}
+                  className="signup-flow-otp-input"
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={handleOTPVerification}
+              disabled={loading || otp.join('').length !== 6}
+              className="signup-flow-submit-btn"
+              style={{
+                opacity: (loading || otp.join('').length !== 6) ? 0.6 : 1,
+                cursor: (loading || otp.join('').length !== 6) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Verifying...' : 'Verify Code'}
+            </button>
+          </div>
+
+          {/* Footer */}
+          <div className="signup-flow-footer">
+            <p className="signup-flow-footer-text">
+              Already have an account?{' '}
+              <button
+                onClick={() => navigate('/login')}
+                className="signup-flow-login-link"
+              >
+                log in
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Phone Input Step
   return (
     <div className="signup-flow-container">
       {/* Background Logo */}
@@ -174,6 +386,15 @@ const SignupFlow: React.FC = () => {
           <p className="signup-flow-subtitle">
             You will be sent a code on this number to verify if you are the owner of the number.
           </p>
+          
+          {/* Error Message */}
+          {error && (
+            <div className="signup-flow-error">
+              <p className="signup-flow-error-text">
+                {error}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Form */}
@@ -239,28 +460,31 @@ const SignupFlow: React.FC = () => {
 
           <button
             type="submit"
-            disabled={phoneNumber.length !== selectedCountry.phoneLength}
+            disabled={phoneNumber.length !== selectedCountry.phoneLength || loading}
             className="signup-flow-submit-btn"
             style={{
-              background: phoneNumber.length === selectedCountry.phoneLength ? '#2563EB' : '#9CA3AF',
-              cursor: phoneNumber.length === selectedCountry.phoneLength ? 'pointer' : 'not-allowed'
+              background: (phoneNumber.length === selectedCountry.phoneLength && !loading) ? '#2563EB' : '#9CA3AF',
+              cursor: (phoneNumber.length === selectedCountry.phoneLength && !loading) ? 'pointer' : 'not-allowed'
             }}
             onMouseEnter={(e) => {
-              if (phoneNumber.length === selectedCountry.phoneLength) {
+              if (phoneNumber.length === selectedCountry.phoneLength && !loading) {
                 e.currentTarget.style.background = '#1D4ED8';
                 e.currentTarget.style.transform = 'translateY(-1px)';
               }
             }}
             onMouseLeave={(e) => {
-              if (phoneNumber.length === selectedCountry.phoneLength) {
+              if (phoneNumber.length === selectedCountry.phoneLength && !loading) {
                 e.currentTarget.style.background = '#2563EB';
                 e.currentTarget.style.transform = 'translateY(0)';
               }
             }}
           >
-            Send Code
+            {loading ? 'Sending...' : 'Send Code'}
           </button>
         </form>
+
+        {/* reCAPTCHA Container - Hidden */}
+        <div id="recaptcha-container" style={{ display: 'none' }}></div>
 
         <div className="signup-flow-footer">
           <p className="signup-flow-footer-text">

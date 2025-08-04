@@ -1,39 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { verifyPhoneOTP } from '../Firebase/Auth';
+import { ConfirmationResult } from 'firebase/auth';
 import '../../css/OTPVerification.css';
 
 const OTPVerification: React.FC = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [expectedOTP, setExpectedOTP] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Get the expected OTP and phone number from localStorage
-    const storedOTP = localStorage.getItem('expectedOTP');
-    const storedPhone = localStorage.getItem('phoneNumber');
+    // Get phone number from navigation state or localStorage
+    const state = location.state as { phoneNumber?: string; countryCode?: string } | null;
     
-    if (storedOTP) {
-      setExpectedOTP(storedOTP);
-      console.log('🔐 Expected OTP:', storedOTP);
-      // Show existing OTP for demo purposes
-      alert(`Your verification code is: ${storedOTP}\n\n(In production, this would be sent via SMS)`);
+    if (state?.phoneNumber) {
+      setPhoneNumber(state.phoneNumber);
+      console.log('� Phone number from navigation:', state.phoneNumber);
     } else {
-      // Generate OTP only if it doesn't exist
-      const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
-      setExpectedOTP(newOTP);
-      localStorage.setItem('expectedOTP', newOTP);
-      console.log('🔐 NEW OTP GENERATED FOR:', storedPhone || 'Phone Number');
-      console.log('🔐 YOUR NEW OTP IS:', newOTP);
-      // Show OTP for demo purposes
-      alert(`Your verification code is: ${newOTP}\n\n(In production, this would be sent via SMS)`);
+      // Fallback to localStorage if navigation state is not available
+      const storedPhone = localStorage.getItem('phoneNumber');
+      if (storedPhone) {
+        setPhoneNumber(storedPhone);
+        console.log('� Phone number from localStorage:', storedPhone);
+      } else {
+        // No phone number available, redirect to signup
+        console.warn('⚠️ No phone number found, redirecting to signup');
+        navigate('/signup-flow');
+        return;
+      }
     }
-    if (storedPhone) {
-      setPhoneNumber(storedPhone);
-    }
-  }, []);
+
+    // Note: Firebase confirmationResult cannot be passed through navigation state
+    // It should be handled in the same component where OTP is sent
+    // For now, we'll redirect back to signup if no confirmation result is available
+    console.log('ℹ️ OTP Verification component loaded');
+    console.log('ℹ️ User should have received SMS with verification code');
+  }, [location.state, navigate]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) return;
@@ -90,32 +97,51 @@ const OTPVerification: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const otpString = otp.join('');
     
-    if (otpString.length === 6) {
-      console.log('🔍 Entered OTP:', otpString);
-      console.log('🔍 Expected OTP:', expectedOTP);
-      
-      if (otpString === expectedOTP) {
-        console.log('✅ OTP VERIFIED SUCCESSFULLY!');
-        // Clear stored OTP data
-        localStorage.removeItem('expectedOTP');
-        localStorage.removeItem('phoneNumber');
-        setError('');
-        navigate('/user-details');
-      } else {
-        console.log('❌ OTP VERIFICATION FAILED!');
-        setError('Invalid OTP. Please check the console for the correct OTP.');
-        // Clear the OTP inputs
-        setOtp(['', '', '', '', '', '']);
-        // Focus first input
-        const firstInput = document.querySelector('input[name="otp-0"]') as HTMLInputElement;
-        if (firstInput) firstInput.focus();
-      }
-    } else {
+    if (otpString.length !== 6) {
       setError('Please enter all 6 digits');
+      return;
+    }
+
+    if (!confirmationResult) {
+      setError('Verification session expired. Please go back and request a new code.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      console.log('🔍 Verifying OTP:', otpString);
+      
+      // Verify OTP using Firebase
+      const user = await verifyPhoneOTP(confirmationResult, otpString);
+      
+      console.log('✅ PHONE VERIFICATION SUCCESSFUL! User:', user.uid);
+      console.log('📱 Phone verified:', user.phoneNumber);
+      
+      // Clear stored data
+      localStorage.removeItem('expectedOTP');
+      localStorage.removeItem('phoneNumber');
+      
+      // Navigate to welcome page after successful verification
+      navigate('/welcome');
+
+    } catch (error: any) {
+      console.error('❌ OTP VERIFICATION FAILED:', error.message);
+      setError('Invalid verification code. Please try again.');
+      
+      // Clear the OTP inputs
+      setOtp(['', '', '', '', '', '']);
+      
+      // Focus first input
+      const firstInput = document.querySelector('input[name="otp-0"]') as HTMLInputElement;
+      if (firstInput) firstInput.focus();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,28 +150,10 @@ const OTPVerification: React.FC = () => {
   };
 
   const handleResendCode = () => {
-    // Generate new OTP
-    const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    setExpectedOTP(newOTP);
-    localStorage.setItem('expectedOTP', newOTP);
-    
-    // Clear any existing error
-    setError('');
-    // Clear the OTP inputs
-    setOtp(['', '', '', '', '', '']);
-    
-    // Console log for debugging
-    console.log('🔐 NEW OTP GENERATED FOR:', phoneNumber || 'Phone Number');
-    console.log('🔐 YOUR NEW OTP IS:', newOTP);
-    
-    // Show alert with OTP for demo purposes
-    alert(`Your verification code is: ${newOTP}\n\n(In production, this would be sent via SMS)`);
-    
-    // Focus first input after resend
-    setTimeout(() => {
-      const firstInput = document.querySelector('input[id="otp-0"]') as HTMLInputElement;
-      if (firstInput) firstInput.focus();
-    }, 100);
+    // For now, redirect back to signup flow to resend code
+    // In a full implementation, you'd want to call sendPhoneOTP again
+    console.log('� Redirecting to signup flow to resend code');
+    navigate('/signup-flow');
   };
 
   return (
@@ -180,15 +188,6 @@ const OTPVerification: React.FC = () => {
             <div className="otp-verification-error">
               <p className="otp-verification-error-text">
                 {error}
-              </p>
-            </div>
-          )}
-          
-          {/* Success indicator when OTP is expected */}
-          {expectedOTP && (
-            <div className="otp-verification-success">
-              <p className="otp-verification-success-text">
-                🔐 OTP has been generated! Check the console for your verification code.
               </p>
             </div>
           )}
@@ -234,9 +233,14 @@ const OTPVerification: React.FC = () => {
 
           <button
             type="submit"
+            disabled={loading || otp.join('').length !== 6}
             className="otp-verification-submit-btn"
+            style={{
+              opacity: (loading || otp.join('').length !== 6) ? 0.6 : 1,
+              cursor: (loading || otp.join('').length !== 6) ? 'not-allowed' : 'pointer'
+            }}
           >
-            Verify
+            {loading ? 'Verifying...' : 'Verify'}
           </button>
         </form>
       </div>

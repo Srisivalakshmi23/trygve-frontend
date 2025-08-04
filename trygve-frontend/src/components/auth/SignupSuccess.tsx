@@ -6,7 +6,7 @@ import '../../css/SignupSuccess.css';
 const SignupSuccess: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleBackToLogin = () => {
+  const handleContinue = () => {
     navigate('/welcome');
   };
 
@@ -37,7 +37,7 @@ const SignupSuccess: React.FC = () => {
 
         {/* Button */}
         <button
-          onClick={handleBackToLogin}
+          onClick={handleContinue}
           className="signup-success-btn"
         >
           Back to Login

@@ -458,3 +458,16 @@
   cursor: pointer;
   font-family: 'Poppins', sans-serif;
 }
+
+/* Error Message Styles */
+.login-error-message {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+}

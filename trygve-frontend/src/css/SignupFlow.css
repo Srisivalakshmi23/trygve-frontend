@@ -93,6 +93,22 @@
   font-family: 'Poppins', sans-serif;
 }
 
+/* Error Message Styles */
+.signup-flow-error {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.signup-flow-error-text {
+  color: #DC2626;
+  font-size: 0.875rem;
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+}
+
 .signup-flow-form {
   margin-bottom: 2rem;
 }
@@ -236,4 +252,41 @@
   cursor: pointer;
   text-decoration: underline;
   font-size: 0.9rem;
+}
+
+/* OTP Verification Styles */
+.signup-flow-otp-container {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.signup-flow-otp-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.signup-flow-otp-input {
+  width: 50px;
+  height: 50px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1f2937;
+  background-color: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.signup-flow-otp-input:focus {
+  outline: none;
+  border-color: #2563EB;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.signup-flow-otp-input:hover {
+  border-color: #6b7280;
 }

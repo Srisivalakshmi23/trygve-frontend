@@ -1,60 +1,3 @@
-// import React from 'react';
-// import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-// import OnboardingFlow from './components/OnboardingFlow';
-// import Login from './components/Login';
-// import Signup from './components/SignUp';
-// import OTPVerification from './components/OTPVerification';
-// import Dashboard from './components/Dashboard';
-
-// function App() {
-//   return (
-//     <Router>
-//       <div className="min-h-screen bg-gray-50">
-//         <Routes>
-//           <Route path="/" element={<Navigate to="/onboarding" replace />} />
-//           <Route path="/onboarding" element={<OnboardingFlow />} />
-//           <Route path="/login" element={<Login />} />
-//           <Route path="/signup" element={<Signup />} />
-//           <Route path="/otp-verification" element={<OTPVerification />} />
-//           <Route path="/dashboard" element={<Dashboard />} />
-//         </Routes>
-//       </div>
-//     </Router>
-//   );
-// }
-
-// export default App;
-
-
-
-// import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-// import OnboardingFlow from './components/Onboarding/OnboardingFlow.tsx';
-// import Login from './components/auth/Login.tsx';
-// import Signup from './components/auth/SignUp.tsx';
-// import OTPVerification from './components/auth/OTPVerification.tsx';
-// import Dashboard from './components/Dashboard/Dashboard.tsx';
-
-// function App() {
-//   return (
-//     <Router>
-//       <div className="min-h-screen bg-gray-50">
-//         <Routes>
-//           <Route path="/" element={<Navigate to="/onboarding" replace />} />
-//           <Route path="/onboarding" element={<OnboardingFlow />} />
-//           <Route path="/login" element={<Login />} />
-//           <Route path="/signup" element={<Signup />} />
-//           <Route path="/otp-verification" element={<OTPVerification />} />
-//           <Route path="/dashboard" element={<Dashboard />} />
-//           <Route path="*" element={<Navigate to="/onboarding" replace />} />
-//         </Routes>
-//       </div>
-//     </Router>
-//   );
-// }
-
-// export default App;
-
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import OnboardingFlow from './components/Onboarding/OnboardingFlow';
 import Onboard1 from './components/Onboarding/Onboard1';
@@ -68,6 +11,7 @@ import SignupFlow from './components/auth/SignupFlow';
 import OTPVerification from './components/auth/OTPVerification';
 import UserDetails from './components/auth/UserDetails';
 import SignupSuccess from './components/auth/SignupSuccess';
+// import Dashboard from './components/Dashboard/Dashboard';
 // import Login from './pages/Login'; // Create later
 
 function App() {
@@ -86,6 +30,7 @@ function App() {
         <Route path="/otp-verification" element={<OTPVerification />} />
         <Route path="/user-details" element={<UserDetails />} />
         <Route path="/signup-success" element={<SignupSuccess />} />
+        {/* <Route path="/dashboard" element={<Dashboard />} /> */}
       </Routes>
     </Router>
   );

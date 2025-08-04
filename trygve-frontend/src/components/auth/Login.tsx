@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { setupRecaptcha, sendPhoneOTP, verifyPhoneOTP } from '../Firebase/Auth';
+import { RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
+import { auth } from '../Firebase/Config';
 import '../../css/Login.css';
 
 const Login: React.FC = () => {
-  const [step, setStep] = useState<'welcome' | 'otp' | 'verification' | 'complete'>('welcome');
+  const [step, setStep] = useState<'welcome' | 'otp' | 'verification' | 'complete'>('otp');
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [selectedCountry, setSelectedCountry] = useState({
     code: 'IN',
     name: 'India',
@@ -16,7 +24,6 @@ const Login: React.FC = () => {
     phone: '',
     otp: ['', '', '', '', '', '']
   });
-  const [generatedOTP, setGeneratedOTP] = useState<string>('');
   const navigate = useNavigate();
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +45,31 @@ const Login: React.FC = () => {
     { code: 'MY', name: 'Malaysia', dialCode: '+60', flag: '🇲🇾', phoneLength: 9 },
     { code: 'TH', name: 'Thailand', dialCode: '+66', flag: '🇹🇭', phoneLength: 9 }
   ];
+
+  // Initialize reCAPTCHA when moving to OTP step
+  useEffect(() => {
+    if (step === 'otp') {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        try {
+          const verifier = setupRecaptcha('recaptcha-container');
+          setRecaptchaVerifier(verifier);
+          console.log('✅ Login reCAPTCHA initialized');
+        } catch (error) {
+          console.error('❌ Failed to initialize login reCAPTCHA:', error);
+          setError('Failed to initialize verification system');
+        }
+      }, 100);
+    }
+
+    // Cleanup on unmount or step change
+    return () => {
+      if (recaptchaVerifier && step !== 'otp') {
+        recaptchaVerifier.clear();
+        setRecaptchaVerifier(null);
+      }
+    };
+  }, [step]);
 
   // Load signup data from localStorage when component mounts
   useEffect(() => {
@@ -105,101 +137,106 @@ const Login: React.FC = () => {
     }
   }, [formData.phone, selectedCountry.phoneLength]);
 
-  const checkEmailExists = (email: string): boolean => {
-    // Check if user has completed signup process
-    const userDetailsData = localStorage.getItem('userDetailsData');
-    const signupData = localStorage.getItem('signupFormData');
+  const handleOTPSubmit = async () => {
+    setError('');
     
-    console.log('🔍 Checking email existence for:', email);
-    console.log('🔍 userDetailsData:', userDetailsData);
-    console.log('🔍 signupData:', signupData);
-    
-    // First check userDetailsData (from UserDetails component)
-    if (userDetailsData) {
-      try {
-        const parsedUserDetails = JSON.parse(userDetailsData);
-        console.log('🔍 Parsed userDetailsData:', parsedUserDetails);
-        if (parsedUserDetails.email === email) {
-          console.log('✅ Email found in userDetailsData');
-          return true;
-        }
-      } catch (error) {
-        console.log('❌ Error parsing userDetailsData:', error);
-      }
+    if (formData.phone.length !== selectedCountry.phoneLength) {
+      setError('Please enter a complete phone number');
+      return;
     }
-    
-    // Also check signupData (from SignupFlow component) as fallback
-    if (signupData) {
-      try {
-        const parsedSignupData = JSON.parse(signupData);
-        console.log('🔍 Parsed signupData:', parsedSignupData);
-        // Some users might have completed signup but not user details yet
-        // In this case, we'll allow them to login if they have the signup data
-        if (parsedSignupData.phoneNumber || parsedSignupData.countryCode) {
-          console.log('✅ User has signup data, allowing login');
-          return true;
-        }
-      } catch (error) {
-        console.log('❌ Error parsing signupData:', error);
-      }
+
+    if (!recaptchaVerifier) {
+      setError('Verification system not ready. Please refresh the page.');
+      return;
     }
-    
-    console.log('❌ Email not found in any stored data');
-    return false;
-  };
 
-  const handleOTPSubmit = () => {
-    if (formData.phone.length === selectedCountry.phoneLength && formData.email) {
-      // Check if email exists in signup data
-      if (!checkEmailExists(formData.email)) {
-        alert('Account not found. This email is not registered. Please sign up first.');
-        return;
-      }
+    setLoading(true);
 
-      // Generate OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOTP(otp);
+    try {
+      const fullPhoneNumber = selectedCountry.dialCode + formData.phone;
+      console.log('📱 Sending OTP for login to:', fullPhoneNumber);
+
+      // Send OTP using Firebase
+      const result = await sendPhoneOTP(fullPhoneNumber, recaptchaVerifier);
+      setConfirmationResult(result);
       
-      console.log('🔐 OTP GENERATED FOR LOGIN:');
-      console.log('🔐 Email:', formData.email);
-      console.log('🔐 Phone:', selectedCountry.dialCode + formData.phone);
-      console.log('🔐 YOUR OTP IS:', otp);
-      console.log('🔐 Please enter this OTP to continue');
-      
-      // Store OTP for verification step
-      localStorage.setItem('loginOTP', otp);
-      localStorage.setItem('loginPhone', selectedCountry.dialCode + formData.phone);
-      localStorage.setItem('loginEmail', formData.email);
+      console.log('✅ Login OTP sent successfully to:', fullPhoneNumber);
       
       setStep('verification');
-    } else {
-      alert('Please enter both email and complete phone number');
+
+    } catch (error: any) {
+      console.error('❌ Failed to send login OTP:', error.message);
+      if (error.code === 'auth/user-not-found') {
+        setError('No account found with this phone number. Please sign up first.');
+      } else {
+        setError(error.message || 'Failed to send verification code. Please try again.');
+      }
+      
+      // Reset reCAPTCHA on error
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+        try {
+          const newVerifier = setupRecaptcha('recaptcha-container');
+          setRecaptchaVerifier(newVerifier);
+        } catch (setupError) {
+          console.error('❌ Failed to reset login reCAPTCHA:', setupError);
+        }
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleVerificationSubmit = () => {
+  const handleVerificationSubmit = async () => {
+    if (isNavigating) return; // Prevent multiple submissions
+    
     const enteredOTP = formData.otp.join('');
-    const expectedOTP = localStorage.getItem('loginOTP');
     
-    console.log('🔍 Entered OTP:', enteredOTP);
-    console.log('🔍 Expected OTP:', expectedOTP);
-    
-    if (enteredOTP === expectedOTP) {
-      console.log('✅ LOGIN OTP VERIFIED SUCCESSFULLY!');
-      // Clear stored OTP data
-      localStorage.removeItem('loginOTP');
-      localStorage.removeItem('loginPhone');
-      localStorage.removeItem('loginEmail');
+    if (enteredOTP.length !== 6) {
+      setError('Please enter the complete 6-digit verification code');
+      return;
+    }
+
+    if (!confirmationResult) {
+      setError('Verification session expired. Please request a new code.');
+      return;
+    }
+
+    setIsNavigating(true);
+    setError('');
+
+    try {
+      console.log('🔍 Verifying OTP:', enteredOTP);
+      
+      // Verify OTP using Firebase
+      const user = await verifyPhoneOTP(confirmationResult, enteredOTP);
+      
+      console.log('✅ LOGIN SUCCESSFUL! User:', user.uid);
+      console.log('📱 Phone verified:', user.phoneNumber);
+      
       setStep('complete');
-    } else {
-      console.log('❌ LOGIN OTP VERIFICATION FAILED!');
-      alert('Invalid OTP. Please check the console for the correct OTP.');
+
+    } catch (error: any) {
+      console.error('❌ LOGIN OTP VERIFICATION FAILED:', error.message);
+      setError('Invalid verification code. Please try again.');
       // Clear the OTP inputs
       setFormData(prev => ({ ...prev, otp: ['', '', '', '', '', ''] }));
+    } finally {
+      setIsNavigating(false);
     }
   };
 
   const handleFinalContinue = () => {
+    if (isNavigating) return; // Prevent multiple navigation calls
+    
+    setIsNavigating(true);
+    
+    // Clear any remaining login data
+    localStorage.removeItem('loginOTP');
+    localStorage.removeItem('loginPhone');
+    localStorage.removeItem('loginEmail');
+    
+    // Navigate to dashboard only once
     navigate('/dashboard');
   };
 
@@ -294,13 +331,13 @@ const Login: React.FC = () => {
           <div className="login-header">
             {/* <img src="/images/logo.png" alt="Trygve Logo" className="login-logo" /> */}
             <h1 className="login-welcome-title">
-              Welcome to
+              Welcome Back to
             </h1>
             <h1 className="login-brand-title">
               trygve
             </h1>
             <p className="login-subtitle">
-              Your trusted partner for personalized healthcare right at your doorstep
+              Sign in to access your personalized healthcare dashboard
             </p>
           </div>
 
@@ -353,6 +390,15 @@ const Login: React.FC = () => {
             <p className="login-otp-subtitle">
               Enter email and phone number to send one time password.
             </p>
+            
+            {/* Error Message */}
+            {error && (
+              <div className="login-error">
+                <p className="login-error-text">
+                  {error}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Form */}
@@ -472,16 +518,19 @@ const Login: React.FC = () => {
             </div>
           </div>
 
+          {/* reCAPTCHA container */}
+          <div id="recaptcha-container" style={{ marginBottom: '1rem' }}></div>
+
           <button
             onClick={handleOTPSubmit}
-            disabled={formData.phone.length !== selectedCountry.phoneLength || !formData.email}
+            disabled={formData.phone.length !== selectedCountry.phoneLength || loading}
             className="login-send-btn"
             style={{
-              background: (formData.phone.length === selectedCountry.phoneLength && formData.email) ? '#2563EB' : '#9CA3AF',
-              cursor: (formData.phone.length === selectedCountry.phoneLength && formData.email) ? 'pointer' : 'not-allowed'
+              background: (formData.phone.length === selectedCountry.phoneLength && !loading) ? '#2563EB' : '#9CA3AF',
+              cursor: (formData.phone.length === selectedCountry.phoneLength && !loading) ? 'pointer' : 'not-allowed'
             }}
           >
-            Send Code
+            {loading ? 'Sending...' : 'Send Code'}
           </button>
         </div>
       </div>
@@ -527,9 +576,14 @@ const Login: React.FC = () => {
 
           <button
             onClick={handleVerificationSubmit}
+            disabled={loading || formData.otp.join('').length !== 6}
             className="login-continue-btn"
+            style={{
+              opacity: (loading || formData.otp.join('').length !== 6) ? 0.6 : 1,
+              cursor: (loading || formData.otp.join('').length !== 6) ? 'not-allowed' : 'pointer'
+            }}
           >
-            Continue
+            {loading ? 'Verifying...' : 'Continue'}
           </button>
         </div>
       </div>
@@ -558,9 +612,14 @@ const Login: React.FC = () => {
 
           <button
             onClick={handleFinalContinue}
+            disabled={isNavigating}
             className="login-final-continue-btn"
+            style={{
+              opacity: isNavigating ? 0.6 : 1,
+              cursor: isNavigating ? 'not-allowed' : 'pointer'
+            }}
           >
-            Continue
+            {isNavigating ? 'Loading...' : 'Continue'}
           </button>
         </div>
       </div>
